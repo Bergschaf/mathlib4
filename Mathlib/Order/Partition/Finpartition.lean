@@ -765,3 +765,330 @@ theorem card_filter_atomise_le_two_pow (ht : t ∈ F) :
 end Atomise
 
 end Finpartition
+
+/-! ### Finite partitions of finsets -/
+
+
+namespace Finpartition.Set
+
+variable {s t u : Set α} (P : Finpartition s) {a : α}
+
+lemma subset {a : Set α} (ha : a ∈ P.parts) : a ⊆ s := P.le ha
+
+theorem nonempty_of_mem_parts {a : Set α} (ha : a ∈ P.parts) : a.Nonempty := by
+  exact Set.nonempty_iff_ne_empty.mpr (P.ne_bot ha)
+
+@[simp]
+theorem empty_notMem_parts : ∅ ∉ P.parts := P.bot_notMem
+
+@[deprecated (since := "2025-05-23")]
+alias not_empty_mem_parts := empty_notMem_parts
+
+theorem ne_empty (h : t ∈ P.parts) : t ≠ ∅ := P.ne_bot h
+
+lemma eq_of_mem_parts (ht : t ∈ P.parts) (hu : u ∈ P.parts) (hat : a ∈ t) (hau : a ∈ u) : t = u := by
+  apply P.disjoint.elim ht hu <| Set.not_disjoint_iff.2 ⟨a, hat, hau⟩
+
+theorem exists_mem (ha : a ∈ s) : ∃ t ∈ P.parts, a ∈ t := by
+  simp_rw [← P.sup_parts] at ha
+  simp_all
+
+--theorem biUnion_parts : P.parts.biUnion id = s :=
+--  (sup_eq_biUnion _ _).symm.trans P.sup_parts
+
+theorem existsUnique_mem (ha : a ∈ s) : ∃! t, t ∈ P.parts ∧ a ∈ t := by
+  obtain ⟨t, ht, ht'⟩ := exists_mem P ha
+  refine ⟨t, ⟨ht, ht'⟩, ?_⟩
+  exact fun u ⟨hu, hu'⟩ ↦ eq_of_mem_parts P hu ht hu' ht'
+
+/-
+Construct a `Finpartition s` from a finset of finsets `parts` such that each element of `s` is in
+exactly one member of `parts`. This provides a converse to `Finpartition.subset`,
+`Finpartition.not_empty_mem_parts` and `Finpartition.existsUnique_mem`.
+
+@[simps]
+def ofExistsUnique (parts : Finset (Finset α)) (h : ∀ p ∈ parts, p ⊆ s)
+    (h' : ∀ a ∈ s, ∃! t ∈ parts, a ∈ t) (h'' : ∅ ∉ parts) :
+    Finpartition s where
+  parts := parts
+  supIndep := by
+    simp only [supIndep_iff_pairwiseDisjoint]
+    intro a ha b hb hab
+    rw [Function.onFun, Finset.disjoint_left]
+    intro x hx hx'
+    exact hab ((h' x (h _ ha hx)).unique ⟨ha, hx⟩ ⟨hb, hx'⟩)
+  sup_parts := by
+    ext i
+    simp only [mem_sup, id_eq]
+    constructor
+    · rintro ⟨j, hj, hj'⟩
+      exact h j hj hj'
+    · rintro hi
+      exact (h' i hi).exists
+  bot_notMem := h''-/
+
+variable (a : α) [Decidable (a ∈ s)]
+/-- The part of the finpartition that `a` lies in. -/
+noncomputable def part : Set α := if ha : a ∈ s then Classical.choose (existsUnique_mem P ha) else ∅
+
+
+@[simp]
+lemma part_mem : part P a ∈ P.parts ↔ a ∈ s := by
+  by_cases ha : a ∈ s <;> simp [part, ha, choose_mem]
+  let x := (existsUnique_mem P ha).choose_spec.left.left
+  simp at x
+  apply x
+
+
+@[simp]
+lemma part_eq_empty : part P a = ∅ ↔ a ∉ s := by
+  constructor
+  . intro h has
+    sorry
+  . intro h
+    simp [part, h]
+
+  --⟨fun h has ↦ P.ne_empty (P.part_mem.2 has) h, fun h ↦ by simp [part, h]⟩
+
+@[simp]
+lemma part_nonempty : (part P a).Nonempty ↔ a ∈ s := by
+  simpa only [nonempty_iff_ne_empty] using (part_eq_empty P a).
+
+@[simp]
+lemma part_subset (a : α) (ha : a ∈ s) : part P a ha ⊆ s := by
+  let x := (existsUnique_mem P ha).choose_spec
+  by_cases ha : a ∈ s
+  · exact P.le <| P.part_mem.2 ha
+  · simp [P.part_eq_empty.2 ha]
+
+@[simp]
+lemma mem_part_self : a ∈ P.part a ↔ a ∈ s := by
+  by_cases ha : a ∈ s
+  · simp [part, ha, choose_property (p := fun s => a ∈ s) P.parts (P.existsUnique_mem ha)]
+  · simp [P.part_eq_empty.2, ha]
+
+alias ⟨_, mem_part⟩ := mem_part_self
+
+lemma part_eq_iff_mem (ht : t ∈ P.parts) : P.part a = t ↔ a ∈ t := by
+  constructor
+  · rintro rfl
+    simp_all
+  · intro hat
+    apply P.eq_of_mem_parts (a := a) <;> simp [*, P.le ht hat]
+
+lemma part_eq_of_mem (ht : t ∈ P.parts) (hat : a ∈ t) : P.part a = t :=
+  (P.part_eq_iff_mem ht).2 hat
+
+lemma mem_part_iff_part_eq_part {b : α} (ha : a ∈ s) (hb : b ∈ s) :
+    a ∈ P.part b ↔ P.part a = P.part b :=
+  ⟨fun c ↦ (P.part_eq_of_mem (P.part_mem.2 hb) c), fun c ↦ c ▸ P.mem_part ha⟩
+
+theorem part_surjOn : Set.SurjOn P.part s P.parts := fun p hp ↦ by
+  obtain ⟨x, hx⟩ := P.nonempty_of_mem_parts hp
+  have hx' := mem_of_subset (P.le hp) hx
+  use x, hx', (P.existsUnique_mem hx').unique ⟨P.part_mem.2 hx', P.mem_part hx'⟩ ⟨hp, hx⟩
+
+theorem exists_subset_part_bijOn : ∃ r ⊆ s, Set.BijOn P.part r P.parts := by
+  obtain ⟨r, hrs, hr⟩ := P.part_surjOn.exists_bijOn_subset
+  lift r to Finset α using s.finite_toSet.subset hrs
+  exact ⟨r, mod_cast hrs, hr⟩
+
+theorem mem_part_iff_exists {b} : a ∈ P.part b ↔ ∃ p ∈ P.parts, a ∈ p ∧ b ∈ p := by
+  constructor
+  · intro h
+    have : b ∈ s := P.part_nonempty.1 ⟨a, h⟩
+    refine ⟨_, ?_, h, ?_⟩ <;> simp [this]
+  · rintro ⟨p, hp, hap, hbp⟩
+    obtain rfl : P.part b = p := P.part_eq_of_mem hp hbp
+    exact hap
+
+/-- Equivalence between a finpartition's parts as a dependent sum and the partitioned set. -/
+def equivSigmaParts : s ≃ Σ t : P.parts, t.1 where
+  toFun x := ⟨⟨P.part x.1, P.part_mem.2 x.2⟩, ⟨x, P.mem_part x.2⟩⟩
+  invFun x := ⟨x.2, mem_of_subset (P.le x.1.2) x.2.2⟩
+  left_inv x := by simp
+  right_inv x := by
+    ext e
+    · obtain ⟨⟨p, mp⟩, ⟨f, mf⟩⟩ := x
+      dsimp only at mf ⊢
+      rw [P.part_eq_of_mem mp mf]
+    · simp
+
+lemma exists_enumeration : ∃ f : s ≃ Σ t : P.parts, Fin #t.1,
+    ∀ a b : s, P.part a = P.part b ↔ (f a).1 = (f b).1 := by
+  use P.equivSigmaParts.trans ((Equiv.refl _).sigmaCongr (fun t ↦ t.1.equivFin))
+  simp [equivSigmaParts, Equiv.sigmaCongr, Equiv.sigmaCongrLeft]
+
+theorem sum_card_parts : ∑ i ∈ P.parts, #i = #s := by
+  convert congr_arg Finset.card P.biUnion_parts
+  rw [card_biUnion P.supIndep.pairwiseDisjoint]
+  rfl
+
+/-- `⊥` is the partition in singletons, aka discrete partition. -/
+instance (s : Finset α) : Bot (Finpartition s) :=
+  ⟨{  parts := s.map ⟨singleton, singleton_injective⟩
+      supIndep := Set.PairwiseDisjoint.supIndep <| by
+        rw [Finset.coe_map]
+        exact Finset.pairwiseDisjoint_range_singleton.subset (Set.image_subset_range _ _)
+      sup_parts := by rw [sup_map, id_comp, Embedding.coeFn_mk, Finset.sup_singleton_eq_self]
+      bot_notMem := by simp }⟩
+
+@[simp]
+theorem parts_bot (s : Finset α) :
+    (⊥ : Finpartition s).parts = s.map ⟨singleton, singleton_injective⟩ :=
+  rfl
+
+theorem card_bot (s : Finset α) : #(⊥ : Finpartition s).parts = #s := Finset.card_map _
+
+theorem mem_bot_iff : t ∈ (⊥ : Finpartition s).parts ↔ ∃ a ∈ s, {a} = t :=
+  mem_map
+
+instance (s : Finset α) : OrderBot (Finpartition s) :=
+  { (inferInstance : Bot (Finpartition s)) with
+    bot_le := fun P t ht ↦ by
+      rw [mem_bot_iff] at ht
+      obtain ⟨a, ha, rfl⟩ := ht
+      obtain ⟨t, ht, hat⟩ := P.exists_mem ha
+      exact ⟨t, ht, singleton_subset_iff.2 hat⟩ }
+
+theorem card_parts_le_card : #P.parts ≤ #s := by
+  rw [← card_bot s]
+  exact card_mono bot_le
+
+lemma card_mod_card_parts_le : #s % #P.parts ≤ #P.parts := by
+  obtain h | h := (#P.parts).eq_zero_or_pos
+  · rw [h]
+    rw [Finset.card_eq_zero, parts_eq_empty_iff, bot_eq_empty, ← Finset.card_eq_zero] at h
+    rw [h]
+  · exact (Nat.mod_lt _ h).le
+
+section SetSetoid
+
+/-- A setoid over a finite type induces a finpartition of the type's elements,
+where the parts are the setoid's equivalence classes. -/
+@[simps -isSimp]
+def ofSetSetoid (s : Setoid α) (x : Finset α) [DecidableRel s.r] : Finpartition x where
+  parts := x.image fun a ↦ {b ∈ x | s.r a b}
+  supIndep := by
+    suffices ∀ (a b c d : α), s a d → s b d → (s a c ↔ s b c) by
+      simp only [supIndep_iff_pairwiseDisjoint, Set.PairwiseDisjoint, Set.Pairwise, coe_image,
+        Set.mem_image, mem_coe, ne_eq, onFun, id_eq, disjoint_iff_ne, forall_mem_not_eq,
+        forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, mem_filter, not_and, filter_inj',
+        not_forall, Classical.not_imp, @not_imp_comm (_ ↔ _), Decidable.not_not]
+      intro _ _ _ _ _ _ _ _ ha _ hb
+      exact ⟨(s.trans' hb <| s.trans' (s.symm' ha) ·), (s.trans' ha <| s.trans' (s.symm' hb) ·)⟩
+    simp +contextual [← Quotient.eq]
+  sup_parts := by
+    ext a
+    simp_rw [sup_image, id_comp, mem_sup, mem_filter]
+    refine ⟨(·.choose_spec.2.1), fun _ ↦ by use a⟩
+  bot_notMem := by
+    suffices ∀ x₁ ∈ x, ∃ x₂ ∈ x, s x₁ x₂ by simpa [filter_eq_empty_iff]
+    intro x _
+    use x
+
+theorem mem_part_ofSetSetoid_iff_rel {s : Setoid α} (x : Finset α) [DecidableRel s.r] {b : α} :
+    b ∈ (ofSetSetoid s x).part a ↔ a ∈ x ∧ b ∈ x ∧ s a b := by
+  suffices (∃ a₁ ∈ x, (b ∈ x ∧ s a₁ b) ∧ a ∈ x ∧ s a₁ a) ↔ a ∈ x ∧ b ∈ x ∧ s a b by
+    simpa [mem_part_iff_exists, ofSetSetoid_parts]
+  exact ⟨
+    fun ⟨c, _, ⟨hb, hcb⟩, ⟨ha, hca⟩⟩ ↦ ⟨ha, hb, s.trans' (s.symm' hca) hcb⟩,
+    fun h ↦ ⟨a, ⟨h.1, ⟨⟨h.2.1, h.2.2⟩, ⟨h.1, s.refl _⟩⟩⟩⟩
+  ⟩
+
+end SetSetoid
+
+section Setoid
+
+variable [Fintype α]
+
+/-- A setoid over a finite type induces a finpartition of the type's elements,
+where the parts are the setoid's equivalence classes. -/
+@[simps! -isSimp]
+def ofSetoid (s : Setoid α) [DecidableRel s.r] : Finpartition (univ : Finset α) :=
+  ofSetSetoid s univ
+
+theorem mem_part_ofSetoid_iff_rel {s : Setoid α} [DecidableRel s.r] {b : α} :
+    b ∈ (ofSetoid s).part a ↔ s a b := by
+  suffices b ∈ (ofSetSetoid s univ).part a ↔ a ∈ univ ∧ b ∈ univ ∧ s a b by simpa
+  exact mem_part_ofSetSetoid_iff_rel univ
+
+end Setoid
+
+section Atomise
+
+/-- Cuts `s` along the finsets in `F`: Two elements of `s` will be in the same part if they are
+in the same finsets of `F`. -/
+def atomise (s : Finset α) (F : Finset (Finset α)) : Finpartition s :=
+  ofErase (F.powerset.image fun Q ↦ {i ∈ s | ∀ t ∈ F, t ∈ Q ↔ i ∈ t})
+    (Set.PairwiseDisjoint.supIndep fun x hx y hy h ↦
+      disjoint_left.mpr fun z hz1 hz2 ↦
+        h (by
+            rw [mem_coe, mem_image] at hx hy
+            obtain ⟨Q, hQ, rfl⟩ := hx
+            obtain ⟨R, hR, rfl⟩ := hy
+            suffices h' : Q = R by
+              subst h'
+              exact of_eq_true (eq_self {i ∈ s | ∀ t ∈ F, t ∈ Q ↔ i ∈ t})
+            rw [id, mem_filter] at hz1 hz2
+            rw [mem_powerset] at hQ hR
+            ext i
+            refine ⟨fun hi ↦ ?_, fun hi ↦ ?_⟩
+            · rwa [hz2.2 _ (hQ hi), ← hz1.2 _ (hQ hi)]
+            · rwa [hz1.2 _ (hR hi), ← hz2.2 _ (hR hi)]))
+    (by
+      refine (Finset.sup_le fun t ht ↦ ?_).antisymm fun a ha ↦ ?_
+      · rw [mem_image] at ht
+        obtain ⟨A, _, rfl⟩ := ht
+        exact s.filter_subset _
+      · rw [mem_sup]
+        refine
+          ⟨{i ∈ s | ∀ t ∈ F, t ∈ {u ∈ F | a ∈ u} ↔ i ∈ t},
+            mem_image_of_mem _ (mem_powerset.2 <| filter_subset _ _),
+            mem_filter.2 ⟨ha, fun t ht ↦ ?_⟩⟩
+        rw [mem_filter]
+        exact and_iff_right ht)
+
+variable {F : Finset (Finset α)}
+
+theorem mem_atomise :
+    t ∈ (atomise s F).parts ↔
+      t.Nonempty ∧ ∃ Q ⊆ F, {i ∈ s | ∀ u ∈ F, u ∈ Q ↔ i ∈ u} = t := by
+  simp only [atomise, ofErase, bot_eq_empty, mem_erase, mem_image, nonempty_iff_ne_empty,
+    mem_singleton, and_comm, mem_powerset, exists_prop]
+
+theorem atomise_empty (hs : s.Nonempty) : (atomise s ∅).parts = {s} := by
+  simp only [atomise, powerset_empty, image_singleton, notMem_empty, IsEmpty.forall_iff,
+    imp_true_iff, filter_True]
+  exact erase_eq_of_notMem (notMem_singleton.2 hs.ne_empty.symm)
+
+theorem card_atomise_le : #(atomise s F).parts ≤ 2 ^ #F :=
+  (card_le_card <| erase_subset _ _).trans <| Finset.card_image_le.trans (card_powerset _).le
+
+theorem biUnion_filter_atomise (ht : t ∈ F) (hts : t ⊆ s) :
+    {u ∈ (atomise s F).parts | u ⊆ t ∧ u.Nonempty}.biUnion id = t := by
+  ext a
+  refine mem_biUnion.trans ⟨fun ⟨u, hu, ha⟩ ↦ (mem_filter.1 hu).2.1 ha, fun ha ↦ ?_⟩
+  obtain ⟨u, hu, hau⟩ := (atomise s F).exists_mem (hts ha)
+  refine ⟨u, mem_filter.2 ⟨hu, fun b hb ↦ ?_, _, hau⟩, hau⟩
+  obtain ⟨Q, _hQ, rfl⟩ := (mem_atomise.1 hu).2
+  rw [mem_filter] at hau hb
+  rwa [← hb.2 _ ht, hau.2 _ ht]
+
+theorem card_filter_atomise_le_two_pow (ht : t ∈ F) :
+    #{u ∈ (atomise s F).parts | u ⊆ t ∧ u.Nonempty} ≤ 2 ^ (#F - 1) := by
+  suffices h :
+    {u ∈ (atomise s F).parts | u ⊆ t ∧ u.Nonempty} ⊆
+      (F.erase t).powerset.image fun P ↦ {i ∈ s | ∀ x ∈ F, x ∈ insert t P ↔ i ∈ x} by
+    refine (card_le_card h).trans (card_image_le.trans ?_)
+    rw [card_powerset, card_erase_of_mem ht]
+  rw [subset_iff]
+  simp_rw [mem_image, mem_powerset, mem_filter, and_imp, Finset.Nonempty, exists_imp, mem_atomise,
+    and_imp, Finset.Nonempty, exists_imp, and_imp]
+  rintro P' i hi P PQ rfl hy₂ j _hj
+  refine ⟨P.erase t, erase_subset_erase _ PQ, ?_⟩
+  simp only [insert_erase (((mem_filter.1 hi).2 _ ht).2 <| hy₂ hi)]
+
+end Atomise
+
+end Finpartition
