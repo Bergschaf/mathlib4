@@ -10,6 +10,8 @@ import Mathlib.Order.Atoms
 import Mathlib.Order.SupIndep
 import Mathlib.Data.Set.Finite.Basic
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Order.Atoms
+import Mathlib.Data.Finset.Grade
 
 /-!
 # Finite partitions
@@ -451,7 +453,7 @@ end GeneralizedBooleanAlgebra
 
 end Finpartition
 
-/-! ### Finite partitions of finsets -/
+/-! ### Finite partitions of finsets
 
 
 namespace Finpartition
@@ -764,18 +766,81 @@ theorem card_filter_atomise_le_two_pow (ht : t ∈ F) :
 
 end Atomise
 
-end Finpartition
+end Finpartition -/
 
 /-! ### Finite partitions of finsets -/
 
 
-namespace Finpartition.Set
+variable {α : Type*} {β : Type*} [Lattice β] [OrderBot β] [IsAtomistic β]
 
-variable {s t u : Set α} (P : Finpartition s) {a : α}
+class IndexesAtoms (α : semiOutParam (Type*)) (β : Type*) [Lattice β] [OrderBot β] [IsAtomistic β]
+  where
+  toFun : α → {w : β | IsAtom w}
+  invFun : {w : β | IsAtom w} → α
+  leftInv : Function.LeftInverse invFun toFun
+  rightInv : Function.RightInverse invFun toFun
 
-lemma subset {a : Set α} (ha : a ∈ P.parts) : a ⊆ s := P.le ha
+noncomputable instance : IndexesAtoms α (Set α) where
+  toFun x := ⟨{x}, Set.isAtom_singleton x⟩
+  invFun x := (Set.isAtom_iff.mp x.prop).choose
+  leftInv := by simp [LeftInverse]
+  rightInv := by
+    simpa [RightInverse, LeftInverse] using fun a b ↦ (Set.isAtom_iff.mp b).choose_spec.symm
 
-theorem nonempty_of_mem_parts {a : Set α} (ha : a ∈ P.parts) : a.Nonempty := by
+
+instance (priority := low) [f : IndexesAtoms α β] : Membership α β where
+  mem s a := f.toFun a ≤ s
+
+lemma IndexesAtoms.mem_iff [f : IndexesAtoms α β]  {a : α} {b : β} : a ∈ b ↔ f.toFun a ≤ b :=
+    Eq.to_iff rfl
+
+
+variable {α : Type*} {β : Type*} [Lattice β] [OrderBot β] [IsAtomistic β]
+variable [IndexesAtoms α β]
+variable (s : β) (P : Finpartition s) {a : α}
+
+lemma Finset.isAtom_iff' {s : Finset α} : IsAtom s ↔ ∃! a,a ∈ s ∧ s = {a} := by
+  rw [Finset.isAtom_iff]
+  constructor
+  . simp_all
+    intro x h
+    use x
+    simp
+  . intro h
+    use h.exists.choose
+    exact h.exists.choose_spec.right
+
+#check Finset.isAtom_iff'
+noncomputable def Finset.Atom.val {s : Finset α} (h : IsAtom s) := (Finset.isAtom_iff.mp h).choose
+
+lemma Finset.Atom.val.prop {s : Finset α} (h : IsAtom s) : s = {Finset.Atom.val h} := by
+  simp [val]
+  exact (Finset.isAtom_iff.mp h).choose_spec
+
+lemma Finset.Atom.val.val_eq {a : α} : Finset.Atom.val (show IsAtom {a} by exact isAtom_singleton a) = a := by
+  simp [val]
+
+theorem Finset.Atom_le_iff (s : Finset α) (a : Finset α) (ha : IsAtom a) : a ≤ s ↔ Finset.Atom.val ha ∈ s := by
+  constructor
+  sorry
+  sorry
+
+namespace Finpartition
+
+theorem exists_mem (ha : a ∈ s) : ∃ t ∈ P.parts, a ∈ t := by
+  simp_rw [← P.sup_parts] at ha
+  rw [IndexesAtoms.mem_iff] at ha
+
+
+
+
+
+
+
+
+lemma subset {a : β} (ha : a ∈ P.parts) : a ≤ s := P.le ha
+
+theorem nonempty_of_mem_parts {a : β} (ha : a ∈ P.parts) : a.Nonempty := by
   exact Set.nonempty_iff_ne_empty.mpr (P.ne_bot ha)
 
 @[simp]
