@@ -810,7 +810,6 @@ lemma Finset.isAtom_iff' {s : Finset α} : IsAtom s ↔ ∃! a,a ∈ s ∧ s = {
     use h.exists.choose
     exact h.exists.choose_spec.right
 
-#check Finset.isAtom_iff'
 noncomputable def Finset.Atom.val {s : Finset α} (h : IsAtom s) := (Finset.isAtom_iff.mp h).choose
 
 lemma Finset.Atom.val.prop {s : Finset α} (h : IsAtom s) : s = {Finset.Atom.val h} := by
@@ -827,9 +826,82 @@ theorem Finset.Atom_le_iff (s : Finset α) (a : Finset α) (ha : IsAtom a) : a �
 
 namespace Finpartition
 
-theorem exists_mem (ha : a ∈ s) : ∃ t ∈ P.parts, a ∈ t := by
+lemma le_sSup_iff_prop {α : Type*}  [Order.Frame α] (a : α) (ha: IsAtom a) (P : α → Prop) :
+    a ≤ sSup {w | IsAtom w ∧ P w} ↔ P a := by
+  constructor
+  . intro h
+    rw [sSup_eq_iSup'] at h
+    rw [atom_le_iSup] at h
+    rcases h with ⟨i, h1⟩
+    let ⟨hi1, hi2⟩ := i.prop
+    have h1 : i = a := (IsAtom.le_iff_eq hi1 ha.left).mp h1 |>.symm
+    subst h1
+    exact hi2
+    exact ha
+  . intro h
+    apply le_sSup
+    simp [h, ha]
+
+example {α : Type*}  [Order.Frame α] [IsAtomistic α] (a : α) (h : IsAtom a) (b c : α) :
+  a ≤ b ⊔ c ↔ a ≤ b ∨ a ≤ c := by
+  constructor
+  . intro h1
+    let h' := h
+    rw [IsAtom] at h
+    rcases h with ⟨h, h2⟩
+    rw [← sSup_atoms_le_eq b] at h1
+    rw [← sSup_atoms_le_eq c] at h1
+    rw [← sSup_union] at h1
+    rw [← Set.setOf_or] at h1
+    have h2 : {a | IsAtom a ∧ a ≤ b ∨ IsAtom a ∧ a ≤ c} = {a | IsAtom a ∧ (a ≤ b ∨ a ≤ c)} := by
+      ext i
+      simp
+      rw [@and_or_right]
+      grind
+
+    rw [h2] at h1
+    rw [le_sSup_iff_prop] at h1
+    exact h1
+    exact h'
+  . intro h
+    cases h
+    (expose_names; exact le_sup_of_le_left h_1)
+    (expose_names; exact le_sup_of_le_right h_1)
+
+
+
+
+
+
+example {α : Type*} [Lattice α] [OrderBot α] [IsAtomistic α] (a : α) (h : IsAtom a) (b c : α) : a ≤ b ⊔ c ↔ a ≤ b ∨ a ≤ c := by
+  constructor
+  . intro h1
+    rw [IsAtom] at h
+    rcases h with ⟨h, h2⟩
+
+
+
+    let test := (isAtomistic_iff α).mp (by (expose_names; exact inst_9)) (a)
+    rcases test with ⟨s, ⟨h3, h4⟩⟩
+    let test2 := @isLUB_le_iff _ _ _ _ (b ⊔ c) h3
+    let test2 := test2.mp h1
+
+
+
+
+theorem exists_mem (ha : a ∈ s) [DecidableEq (β)] [DecidableEq α] : ∃ t ∈ P.parts, a ∈ t := by
   simp_rw [← P.sup_parts] at ha
   rw [IndexesAtoms.mem_iff] at ha
+
+
+  let x := @Finset.mem_sup α β _ P.parts
+
+
+
+
+  rw [Finset.mem_sup] at ha
+
+
 
 
 
