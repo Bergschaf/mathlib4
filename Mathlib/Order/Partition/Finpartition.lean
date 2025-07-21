@@ -10,6 +10,9 @@ import Mathlib.Order.Atoms
 import Mathlib.Order.SupIndep
 import Mathlib.Data.Set.Finite.Basic
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Order.Atoms
+import Mathlib.Data.Finset.Grade
+
 
 /-!
 # Finite partitions
@@ -451,41 +454,190 @@ end GeneralizedBooleanAlgebra
 
 end Finpartition
 
-/-! ### Finite partitions of finsets -/
 
+/-! ## Indexes Atoms -/
+
+variable {α : Type*} {β : Type*} [Lattice β] [OrderBot β] [IsAtomistic β]
+
+class IndexesAtoms (α : semiOutParam (Type*)) (β : Type*) [Lattice β] [OrderBot β] [IsAtomistic β]
+  where
+  toFun : α → {w : β | IsAtom w}
+  invFun : {w : β | IsAtom w} → α
+  leftInv : Function.LeftInverse invFun toFun
+  rightInv : Function.RightInverse invFun toFun
+  membership : β → α → Prop := fun b a ↦ (toFun a) ≤ b
+  membership_iff (b : β) (a : α) : membership b a ↔ (toFun a) ≤ b := by simp
+
+
+noncomputable instance : IndexesAtoms α (Set α) where
+  toFun x := ⟨{x}, Set.isAtom_singleton x⟩
+  invFun x := (Set.isAtom_iff.mp x.prop).choose
+  leftInv := by simp [LeftInverse]
+  rightInv := by
+    simpa [RightInverse, LeftInverse] using fun a b ↦ (Set.isAtom_iff.mp b).choose_spec.symm
+  membership s a := a ∈ s
+
+instance : IsAtomistic (Finset α) where
+  isLUB_atoms := by
+    intro b
+    use (fun x ↦ {x}) '' b
+    simp only [IsLUB, IsLeast, upperBounds, Set.mem_image, mem_coe, le_eq_subset,
+      forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, singleton_subset_iff,
+      Set.mem_setOf_eq, imp_self, implies_true, lowerBounds, true_and, isAtom_singleton, and_true]
+    exact fun ⦃a⦄ a ↦ a
+
+lemma isAtom_iff_exists_unique  {s : Finset α} : IsAtom s ↔ ∃! a, s = {a} := by
+  simp [← bot_covBy_iff, covBy_iff_exists_cons, eq_comm]
+  constructor
+  . simp
+    intro x hx
+    use x
+    simp_all
+  . intro hx
+    exact hx.exists
+-- (isAtom_iff_exists_unique.mp x.prop).exists.choose
+
+
+
+instance [DecidableEq α] : IndexesAtoms α (Finset α) where
+  toFun x := ⟨{x}, by simp⟩
+  invFun x := Finset.choose (hp := (show ∃! a : α, a ∈ x.val ∧ {a} = x.val by
+      sorry
+
+
+     ))
+  leftInv := sorry
+  rightInv := sorry
+  membership s a := a ∈ s
+
+instance (priority := low) [f : IndexesAtoms α β] : Membership α β where
+  mem := f.membership
+
+lemma not_mem_bot [f : IndexesAtoms α β] (a : α): a ∉ (⊥ : β) := by
+  rw [Membership.mem, instMembershipOfIndexesAtoms]
+  simp [f.membership_iff]
+  exact IsAtom.ne_bot (f.toFun a).prop
+
+/-! General Stuff -/
+
+variable {a : Type*} {β : Type*} [DistribLattice β] [OrderBot β] [IsAtomistic β] [IndexesAtoms α β]
+variable (s t u : β) (P : Finpartition s) {a : α}
+
+lemma isAtomistic.atom_le_sup   (b : β) (hb : IsAtom b)  {c d : β} : b ≤ c ⊔ d ↔ b ≤ c ∨ b ≤ d := by
+  constructor
+  . intro h
+    by_contra hC
+    simp at hC
+    have h1 : Disjoint b c := by
+      apply (IsAtom.not_le_iff_disjoint hb).mp
+      exact hC.left
+    have h2 : Disjoint b d := by
+      apply (IsAtom.not_le_iff_disjoint hb).mp
+      exact hC.right
+    have h : b ≤ c := by
+      apply Disjoint.left_le_of_le_sup_right h h2
+    let h3 := hC.left
+    contradiction
+  . intro h
+    cases h with
+    | inl h =>
+      exact le_sup_of_le_left h
+    | inr h =>
+      exact le_sup_of_le_right h
+
+
+theorem exists_mem (ha : a ∈ s) [DecidableEq β]: ∃ t ∈ P.parts, a ∈ t := by
+  simp [← P.sup_parts] at ha
+  let x := show (a ∈ P.parts.sup id ↔ ∃ t ∈ P.parts, a ∈ t) by
+    induction P.parts using cons_induction with
+    | empty => simp [not_mem_bot]
+    | cons b s h hi =>
+      simp
+      constructor
+      . intro h1
+
+
+
+
+
+
+  apply x.1 ha
+
+
+
+
+/-! ### Parts of Partitions of Sets -/
 
 namespace Finpartition
+open Set
 
-variable [DecidableEq α] {s t u : Finset α} (P : Finpartition s) {a : α}
+variable {s t u : Set α} (P : Finpartition s) {a : α}
 
-lemma subset {a : Finset α} (ha : a ∈ P.parts) : a ⊆ s := P.le ha
+lemma subset {a : Set α} (ha : a ∈ P.parts) : a ⊆ s := P.le ha
 
-theorem nonempty_of_mem_parts {a : Finset α} (ha : a ∈ P.parts) : a.Nonempty :=
+theorem nonempty_of_mem_parts {a : Set α} (ha : a ∈ P.parts) : a.Nonempty :=
   nonempty_iff_ne_empty.2 <| P.ne_bot ha
 
 @[simp]
 theorem empty_notMem_parts : ∅ ∉ P.parts := P.bot_notMem
 
-@[deprecated (since := "2025-05-23")]
-alias not_empty_mem_parts := empty_notMem_parts
+theorem exists_mem (ha : a ∈ s) : ∃ t ∈ P.parts, a ∈ t := by
+  simp only [← P.sup_parts, sup_set_eq_biUnion, id_eq, mem_iUnion, exists_prop] at ha
+  exact ha
 
 theorem ne_empty (h : t ∈ P.parts) : t ≠ ∅ := P.ne_bot h
 
 lemma eq_of_mem_parts (ht : t ∈ P.parts) (hu : u ∈ P.parts) (hat : a ∈ t) (hau : a ∈ u) : t = u :=
-  P.disjoint.elim ht hu <| not_disjoint_iff.2 ⟨a, hat, hau⟩
-
-theorem exists_mem (ha : a ∈ s) : ∃ t ∈ P.parts, a ∈ t := by
-  simp_rw [← P.sup_parts] at ha
-  exact mem_sup.1 ha
-
-theorem biUnion_parts : P.parts.biUnion id = s :=
-  (sup_eq_biUnion _ _).symm.trans P.sup_parts
+  P.disjoint.elim ht hu <| Set.not_disjoint_iff.2 ⟨a, hat, hau⟩
 
 theorem existsUnique_mem (ha : a ∈ s) : ∃! t, t ∈ P.parts ∧ a ∈ t := by
   obtain ⟨t, ht, ht'⟩ := P.exists_mem ha
   refine ⟨t, ⟨ht, ht'⟩, ?_⟩
   rintro u ⟨hu, hu'⟩
   exact P.eq_of_mem_parts hu ht hu' ht'
+
+
+def part (a : α) [Decidable (a ∈ s)] [DecidablePred (fun a_1 : Set α ↦ a ∈ a_1)]  4: Set α :=
+   if ha : a ∈ s then choose (hp := P.existsUnique_mem ha) else ∅
+
+
+def part (a : α) (ha : a ∈ s) : Set α := Classical.choose (existsUnique_mem P ha).exists
+
+
+
+/-! ### Finite partitions of finsets -/
+
+
+variable [DecidableEq α] {s t u : Finset α} (P : Finpartition s) {a : α}
+
+lemma subset_fin {a : Finset α} (ha : a ∈ P.parts) : a ⊆ s := P.le ha
+
+theorem nonempty_of_mem_parts_fin{a : Finset α} (ha : a ∈ P.parts) : a.Nonempty :=
+  nonempty_iff_ne_empty.2 <| P.ne_bot ha
+
+@[simp]
+theorem empty_notMem_parts_fin : ∅ ∉ P.parts := P.bot_notMem
+
+@[deprecated (since := "2025-05-23")]
+alias not_empty_mem_parts := empty_notMem_parts
+
+theorem ne_empty_fin (h : t ∈ P.parts) : t ≠ ∅ := P.ne_bot h
+
+lemma eq_of_mem_parts_fin (ht : t ∈ P.parts) (hu : u ∈ P.parts) (hat : a ∈ t) (hau : a ∈ u) : t = u :=
+  P.disjoint.elim ht hu <| not_disjoint_iff.2 ⟨a, hat, hau⟩
+
+theorem exists_mem_fin (ha : a ∈ s) : ∃ t ∈ P.parts, a ∈ t := by
+  simp_rw [← P.sup_parts] at ha
+  exact mem_sup.1 ha
+
+theorem biUnion_parts : P.parts.biUnion id = s :=
+  (sup_eq_biUnion _ _).symm.trans P.sup_parts
+
+theorem existsUnique_mem_fin (ha : a ∈ s) : ∃! t, t ∈ P.parts ∧ a ∈ t := by
+  obtain ⟨t, ht, ht'⟩ := P.exists_mem_fin ha
+  refine ⟨t, ⟨ht, ht'⟩, ?_⟩
+  rintro u ⟨hu, hu'⟩
+  exact P.eq_of_mem_parts_fin hu ht hu' ht'
 
 /--
 Construct a `Finpartition s` from a finset of finsets `parts` such that each element of `s` is in
@@ -514,7 +666,7 @@ def ofExistsUnique (parts : Finset (Finset α)) (h : ∀ p ∈ parts, p ⊆ s)
   bot_notMem := h''
 
 /-- The part of the finpartition that `a` lies in. -/
-def part (a : α) : Finset α := if ha : a ∈ s then choose (hp := P.existsUnique_mem ha) else ∅
+def part_fin (a : α) : Finset α := if ha : a ∈ s then choose (hp := P.existsUnique_mem_fin ha) else ∅
 
 @[simp]
 lemma part_mem : P.part a ∈ P.parts ↔ a ∈ s := by
