@@ -561,6 +561,7 @@ theorem exists_mem (ha : a ∈ s) [DecidableEq β]: ∃ t ∈ P.parts, a ∈ t :
 
 
 
+
   apply x.1 ha
 
 
