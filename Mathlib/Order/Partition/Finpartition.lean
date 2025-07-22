@@ -456,7 +456,7 @@ end Finpartition
 
 
 /-! ## Indexes Atoms -/
-
+/-
 variable {α : Type*} {β : Type*} [Lattice β] [OrderBot β] [IsAtomistic β]
 
 class IndexesAtoms (α : semiOutParam (Type*)) (β : Type*) [Lattice β] [OrderBot β] [IsAtomistic β]
@@ -567,12 +567,12 @@ theorem exists_mem (ha : a ∈ s) [DecidableEq β]: ∃ t ∈ P.parts, a ∈ t :
 
 
 
-/-! ### Parts of Partitions of Sets -/
+/-! ### Parts of Partitions of Sets -/-/
 
 namespace Finpartition
 open Set
-
-variable {s t u : Set α} (P : Finpartition s) {a : α}
+#synth SetLike (Finset α)
+variable {A B C : Type*} [SetLike A] (P : Finpartition s) {a : α}
 
 lemma subset {a : Set α} (ha : a ∈ P.parts) : a ⊆ s := P.le ha
 
