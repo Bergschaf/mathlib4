@@ -733,9 +733,7 @@ def toSetOfIsAtom {α} [CompleteAtomicBooleanAlgebra α] : α ≃o (Set {a : α 
     rw [← Subtype.val_injective.image_injective.eq_iff, unique_decomposition_into_atoms h]
     ext a
     simp
-  map_rel_iff' {a b} := by
-    simp only [Equiv.coe_fn_mk, Set.le_eq_subset, Set.setOf_subset_setOf, Subtype.forall]
-    exact le_iff_atom_le_imp.symm
+  map_rel_iff' {a b} := by simpa using le_iff_atom_le_imp.symm
 
 end CompleteAtomicBooleanAlgebra
 
