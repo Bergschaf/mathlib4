@@ -291,4 +291,11 @@ lemma comp_eq_right_iff_le : n ∘ m = m ↔ n ≤ m where
     range_subset_range_iff_exists_comp.mpr ⟨m, (comp_eq_right_iff_le.mpr h).symm⟩
 
 end Frame
+
+def doubleNegation [Order.Frame X] : Nucleus X where
+  toFun x := xᶜᶜ
+  map_inf' a b := compl_compl_inf_distrib a b
+  idempotent' a := by simp
+  le_apply' a := le_compl_compl
+
 end Nucleus

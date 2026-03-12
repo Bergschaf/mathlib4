@@ -8,6 +8,8 @@ module
 public import Mathlib.Order.Nucleus
 public import Mathlib.Order.SupClosed
 public import Mathlib.Order.Hom.CompleteLattice
+public import Mathlib.Order.BooleanAlgebra.Basic
+public import Mathlib.Data.Fintype.Order
 
 /-!
 # Sublocale
@@ -285,6 +287,11 @@ instance Sublocale.instCoframeMinimalAxioms : Order.Coframe.MinimalAxioms (Sublo
 instance Sublocale.instCoframe : Order.Coframe (Sublocale X) :=
   .ofMinimalAxioms Sublocale.instCoframeMinimalAxioms
 
+noncomputable instance : CompleteBooleanAlgebra Bool where
+  __ := Fintype.toCompleteBooleanAlgebra Bool
+
+def Sublocale.point (S : Sublocale X) := FrameHom Bool S
+
 /--
 An open sublocale is defined by an element of the locale.
 -/
@@ -409,6 +416,8 @@ def closedIsoDual : (Closed X) ≃o Xᵒᵈ where
 /-- The element of a closed sublocale. -/
 abbrev getElement (C : Closed X) := C.closedIsoDual.ofDual
 
+@[ext] lemma ext_iff' (h : C.getElement = D.getElement) : C = D := by exact Closed.ext_iff.mpr h
+
 lemma le_def : C ≤ D ↔ D.getElement ≤ C.getElement:= by simp [getElement, closedIsoDual]; rfl
 
 instance : CompleteLattice (Closed X) := closedIsoDual.symm.toGaloisInsertion.liftCompleteLattice
@@ -459,6 +468,78 @@ def toSublocale : CoFrameHom (Closed X) (Sublocale X) where
 def compl (c : Closed X) : Open X := ⟨c.getElement⟩
 
 end Closed
+
+namespace Sublocale
+
+def closure (S : Sublocale X) : Closed X := sInf {C : Closed X | S ≤ C.toSublocale}
+
+@[simp]
+lemma le_closure {S : Sublocale X} : S ≤ S.closure.toSublocale := by
+  simp [closure]
+
+def doubleNegation := @Nucleus.doubleNegation.toSublocale X
+
+def dense (S : Sublocale X) := S.closure = ⊤
+
+set_option backward.isDefEq.respectTransparency false in
+lemma doubleNegation_dense : dense <| @doubleNegation X _ := by
+  simp only [dense, closure, doubleNegation, Nucleus.doubleNegation, Closed.toSublocale,
+    CoFrameHom.coe_mk, SupBotHom.coe_mk, SupHom.coe_mk, map_le_map_iff, OrderDual.toDual_le_toDual,
+    ← Nucleus.coe_le_coe, Nucleus.coe_mk, InfHom.coe_mk, Pi.le_def, sInf_eq_top, mem_setOf_eq]
+  intro a h
+  simp only [Closed.toNucleus, Nucleus.coe_mk, InfHom.coe_mk, sup_le_iff] at h
+  specialize h ⊥
+  simp_all
+
+lemma doubleNegation_smallestDense : doubleNegation = sInf {s : Sublocale X | dense s} := by
+  apply le_antisymm
+  · simp only [le_sInf_iff, mem_setOf_eq]
+    intro b h
+    simp [dense, closure, Closed.toSublocale] at h
+    contrapose h
+    simp
+    use closure b
+    apply And.intro
+    . sorry
+    . simp [closure]
+      simp [doubleNegation, Nucleus.doubleNegation] at h
+      simp [nucleusIsoSublocale, ← toNucleus_le_toNucleus, Pi.le_def] at h
+      simp [Closed.toSublocale, Closed.toNucleus, Nucleus.toSublocale]
+    rcases h with ⟨x, h⟩
+    simp [Closed.toNucleus]
+    simp_rw [← toNucleus_le_toNucleus, ← Nucleus.coe_le_coe, Pi.le_def]
+    simp
+    simp [restrict, sInf_le_iff, lowerBounds] at h
+    rcases h with ⟨y, ⟨h1, h2⟩⟩
+    use ⟨y⟩
+    simp
+    apply And.intro
+    . intro i
+      apply And.intro
+      . apply h1
+        . sorry
+        . simp
+
+    intro i
+    simp_rw [← toNucleus_le_toNucleus] at h
+    have h1 (a : Closed X) : a.toNucleus.toSublocale.toNucleus = a.toNucleus := by
+      simp [Nucleus.toSublocale, Sublocale.toNucleus]
+    simp_rw [h1] at h -- , ← Nucleus.coe_le_coe, Pi.le_def] at h
+    contrapose h
+    simp
+
+
+
+
+
+
+
+
+  · apply sInf_le
+    simp only [mem_setOf_eq]
+    exact doubleNegation_dense
+
+end Sublocale
 
 namespace Open
 open Sublocale
