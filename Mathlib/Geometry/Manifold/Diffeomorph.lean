@@ -673,6 +673,7 @@ end Constructions
 
 end Diffeomorph
 
+variable (I n) in
 open OpenPartialHomeomorph in
 /--
 The push-forward of a `ChartedSpace` along a homeomorphism `f : M ≃ₜ N` is a manifold, if `M`
@@ -685,10 +686,67 @@ def Homeomorph.isManifold [IsManifold I n M] (φ : M ≃ₜ N) :
     __ := φ.chartedSpace H
     compatible {e e'} he he' := by
       have : e.symm ≫ₕ e' =
-          (φ.transOpenPartialHomeomorph e).symm ≫ₕ φ.transOpenPartialHomeomorph e' := by
+      (φ.transOpenPartialHomeomorph e).symm ≫ₕ φ.transOpenPartialHomeomorph e' := by
         simp [trans_symm_eq_symm_trans_symm, trans_assoc,
           ← trans_assoc φ.toOpenPartialHomeomorph.symm,
           Homeomorph.transOpenPartialHomeomorph_eq_trans]
       rw [this]
       exact IsManifold.compatible_of_mem_maximalAtlas
         (φ.chartedSpace_trans_mem_maximalAtlas e he) (φ.chartedSpace_trans_mem_maximalAtlas e' he')
+
+variable (I) in
+lemma Homeomorph.chartedSpace_extChartAt [Nonempty M] (φ : M ≃ₜ N) (x : N) :
+    letI := φ.chartedSpace H
+    Set.EqOn (extChartAt I x)
+      (φ.symm.toPartialEquiv.trans (extChartAt I (φ.symm x)))
+      ((extChartAt I x).source ∩ (φ.symm.toPartialEquiv.trans (extChartAt I (φ.symm x))).source) := by
+  intro x' hx'
+  simp only [extChartAt, OpenPartialHomeomorph.extend, PartialEquiv.coe_trans,
+    ModelWithCorners.toPartialEquiv_coe, OpenPartialHomeomorph.toFun_eq_coe, comp_apply,
+    Equiv.toPartialEquiv_apply, coe_toEquiv]
+  congr
+  ----
+  rw [Homeomorph.chartedSpace, IsLocalHomeomorph.chartedSpace, IsLocalHomeomorph.chartedSpaceOfRightInverse]
+  simp only [chartAt, OpenPartialHomeomorph.coe_trans, comp_apply]
+  congr
+  have h1 := Surjective.hasRightInverse (Homeomorph.surjective φ) |>.choose_spec
+  let h := Function.invFun_eq_of_injective_of_rightInverse φ.injective h1
+  rw [← h]
+  · apply φ.injective
+    simp only [apply_symm_apply]
+    apply Function.rightInverse_invFun φ.surjective
+  rw [← @symm_apply_eq]
+  simp only [symm_symm]
+  have h := localInverseAt_trans_toOpenPartialHomeomorph φ (φ.surjective.hasRightInverse.choose x)
+  have h1 := h.right
+  simp only [EqOn, OpenPartialHomeomorph.trans_toPartialEquiv, PartialEquiv.trans_source,
+    OpenPartialHomeomorph.toFun_eq_coe, toOpenPartialHomeomorph_source, preimage_univ, inter_univ,
+    OpenPartialHomeomorph.coe_trans, toOpenPartialHomeomorph_apply, comp_apply,
+    OpenPartialHomeomorph.ofSet_apply, id_eq] at h1
+  apply h1
+  rw [Homeomorph.chartedSpace, IsLocalHomeomorph.chartedSpace, IsLocalHomeomorph.chartedSpaceOfRightInverse] at hx'
+  simp [chartAt] at hx'
+  grind
+
+noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] (φ : M ≃ₜ N) :
+    letI := φ.chartedSpace H; M ≃ₘ^n⟮I, I⟯ N where
+  __ := φ.chartedSpace H
+  __ := φ
+  contMDiff_toFun := letI := φ.isManifold I n; letI := φ.chartedSpace H; by
+    rw [contMDiff_iff]
+    constructor
+    · apply Homeomorph.continuous
+    intro x y
+
+    have h : Set.EqOn ((↑(extChartAt I y) ∘ ⇑φ.toEquiv ∘ ↑(extChartAt I x).symm)) id (((extChartAt I x).target ∩ ↑(extChartAt I x).symm ⁻¹' ⇑φ.toEquiv ⁻¹' (extChartAt I y).source)) := by
+      intro a ha
+      have h2 := φ.chartedSpace_extChartAt I y
+      rw [Set.EqOn] at h2
+      sorry -- das soltle klappen mit bissle EqOn umschreieb
+
+      sorry
+
+
+    -- contDiffOn_congr verwenden
+
+  contMDiff_invFun := by sorry

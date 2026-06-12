@@ -334,4 +334,9 @@ lemma toOpenPartialHomeomorph_trans_localInverseAt (φ : X ≃ₜ Y) (m : X) :
   simpa [EqOnSource, Set.EqOn, open_source]
     using fun _ hx ↦ φ.bijective.injective <| IsLocalHomeomorph.apply_localInverseAt_of_mem _ hx
 
+lemma localInverseAt_trans_toOpenPartialHomeomorph (φ : X ≃ₜ Y) (m : X) :
+    ((φ.isLocalHomeomorph.localInverseAt m).trans φ.toOpenPartialHomeomorph).EqOnSource
+      <| .ofSet ((φ.isLocalHomeomorph.localInverseAt m).source) (by simp [open_source]) := by
+  simpa [EqOnSource, Set.EqOn] using fun _ hx ↦ IsLocalHomeomorph.apply_localInverseAt_of_mem _ hx
+
 end Homeomorph
