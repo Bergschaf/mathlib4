@@ -738,15 +738,34 @@ noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] (φ : M
     · apply Homeomorph.continuous
     intro x y
 
-    have h : Set.EqOn ((↑(extChartAt I y) ∘ ⇑φ.toEquiv ∘ ↑(extChartAt I x).symm)) id (((extChartAt I x).target ∩ ↑(extChartAt I x).symm ⁻¹' ⇑φ.toEquiv ⁻¹' (extChartAt I y).source)) := by
+    have h : Set.EqOn ((↑(extChartAt I y) ∘ ⇑φ.toEquiv ∘ ↑(extChartAt I x).symm)) (↑(extChartAt I (φ.symm y)) ∘ (↑(extChartAt I x).symm)) (((extChartAt I x).target ∩ ↑(extChartAt I x).symm ⁻¹' ⇑φ.toEquiv ⁻¹' (extChartAt I y).source)) := by
+
       intro a ha
       have h2 := φ.chartedSpace_extChartAt I y
       rw [Set.EqOn] at h2
-      sorry -- das soltle klappen mit bissle EqOn umschreieb
+      simp only [coe_toEquiv, comp_apply, id_eq]
+      rw [h2]
+      simp only [PartialEquiv.coe_trans, Equiv.toPartialEquiv_apply, coe_toEquiv, comp_apply,
+        symm_apply_apply]
+      simp only [PartialEquiv.trans_source, Equiv.toPartialEquiv_source, Equiv.toPartialEquiv_apply,
+        coe_toEquiv, univ_inter, mem_inter_iff, mem_preimage, symm_apply_apply]
+
+      simp only [coe_toEquiv, mem_inter_iff, mem_preimage] at ha
+      rcases ha with ⟨ha1, ha2⟩
+      constructor
+      exact ha2
+      simp [-extChartAt] at h2
 
       sorry
 
 
-    -- contDiffOn_congr verwenden
+
+
+
+
+    rw [contDiffOn_congr h]
+    -- TODO zeigen dass die source passt
+    apply contDiffOn_ext_coord_change
+
 
   contMDiff_invFun := by sorry
