@@ -164,6 +164,7 @@ end IsLocalHomeomorphOn
 def IsLocalHomeomorph :=
   ∀ x : X, ∃ e : OpenPartialHomeomorph X Y, x ∈ e.source ∧ f = e
 
+/-- A homeomorphism is a local homeomorphism. -/
 theorem Homeomorph.isLocalHomeomorph (f : X ≃ₜ Y) : IsLocalHomeomorph f :=
   fun _ ↦ ⟨f.toOpenPartialHomeomorph, trivial, rfl⟩
 
@@ -213,9 +214,8 @@ theorem mk (h : ∀ x : X, ∃ e : OpenPartialHomeomorph X Y, x ∈ e.source ∧
   isLocalHomeomorph_iff_isLocalHomeomorphOn_univ.mpr
     (IsLocalHomeomorphOn.mk f Set.univ fun x _hx ↦ h x)
 
-/-- A homeomorphism is a local homeomorphism. -/
-lemma Homeomorph.isLocalHomeomorph (h : X ≃ₜ Y) : IsLocalHomeomorph h :=
-  fun _ ↦ ⟨h.toOpenPartialHomeomorph, trivial, rfl⟩
+@[deprecated (since := "2026-06-06")]
+alias Homeomorph.isLocalHomeomorph := _root_.Homeomorph.isLocalHomeomorph
 
 variable {g f}
 
@@ -317,21 +317,31 @@ lemma injOn_localInverseAt_target : (hf.localInverseAt x).target.InjOn f := by
   hf.injOn_localInverseAt_target (by simp) hf.self_mem_localInverseAt_target <|
     hf.apply_localInverseAt_of_mem hf.apply_self_mem_localInverseAt_source
 
+/--
+This lemma proves that the composition of a local homeomorphism `f : X → Y` with its
+chosen local inverse `IsLocalHomeomorph.localInverseAt` is the identity.
+-/
+lemma trans_localInverseAt (hf : IsLocalHomeomorph f) (m : X) :
+    Set.InvOn (hf.localInverseAt m) f (hf.localInverseAt m).target (hf.localInverseAt m).source := by
+  constructor
+  · intro x hx
+    rw [← congrFun (hf.localInverseAt_symm m) x, OpenPartialHomeomorph.right_inv _ hx]
+  · exact fun _ hx ↦ apply_localInverseAt_of_mem hf hx
+
 end IsLocalHomeomorph
 
 namespace Homeomorph
 open OpenPartialHomeomorph
-
 /--
-This lemma proves that the composition of `φ : OpenPartialHomeomorph` with its
-chosen local inverse `φ.isLocalHomeomorph.localInverseAt` is the identity.
+This lemma proves that the composition of `φ : X ≃ₜ Y` with its
+chosen local inverse `φ.isLocalHomeomorph.localInverseAt` is equivalent to the identity.
 We have to use `OpenPartialHomemorph.EqOnSource` here because `localInverseAt` uses choice, which
 means that we can't prove anything about its source.
 -/
 lemma toOpenPartialHomeomorph_trans_localInverseAt (φ : X ≃ₜ Y) (m : X) :
     (φ.toOpenPartialHomeomorph.trans (φ.isLocalHomeomorph.localInverseAt m)).EqOnSource
       <| .ofSet (φ ⁻¹' (φ.isLocalHomeomorph.localInverseAt m).source) (by simp [open_source]) := by
-  simpa [EqOnSource, Set.EqOn, open_source]
+  simpa [EqOnSource, Set.EqOn]
     using fun _ hx ↦ φ.bijective.injective <| IsLocalHomeomorph.apply_localInverseAt_of_mem _ hx
 
 lemma localInverseAt_trans_toOpenPartialHomeomorph (φ : X ≃ₜ Y) (m : X) :

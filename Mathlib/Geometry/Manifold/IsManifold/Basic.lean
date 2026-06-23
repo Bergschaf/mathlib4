@@ -10,6 +10,7 @@ public import Mathlib.Analysis.Normed.Module.Convex
 public import Mathlib.Analysis.RCLike.TangentCone
 public import Mathlib.Data.Bundle
 public import Mathlib.Geometry.Manifold.HasGroupoid
+public import Mathlib.Tactic.CrossRefAttribute
 
 /-!
 # `C^n` manifolds (possibly with boundary or corners)
@@ -751,7 +752,7 @@ theorem contDiffGroupoid_prod {I : ModelWithCorners 𝕜 E H} {I' : ModelWithCor
     e.prod e' ∈ contDiffGroupoid n (I.prod I') := by
   obtain ⟨he, he_symm⟩ := he
   obtain ⟨he', he'_symm⟩ := he'
-  constructor <;> simp only [PartialEquiv.prod_source, OpenPartialHomeomorph.prod_toPartialEquiv,
+  constructor <;> simp only [OpenPartialHomeomorph.prod_toPartialHomeomorph,
     contDiffPregroupoid]
   · have h3 := ContDiffOn.prodMap he he'
     rw [← I.image_eq, ← I'.image_eq, prod_image_image_eq] at h3
@@ -995,17 +996,18 @@ end IsManifold
 
 namespace Homeomorph
 
-variable {N M 𝕜 E H : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup E] [TopologicalSpace H]
-  [TopologicalSpace N] [NormedSpace 𝕜 E] {I : ModelWithCorners 𝕜 E H} [TopologicalSpace M]
-  [ChartedSpace H M] {n : ℕ∞ω} [IsManifold I n M]
+variable {𝕜 E H M N : Type*} [NontriviallyNormedField 𝕜]
+  [NormedAddCommGroup E] [NormedSpace 𝕜 E] [TopologicalSpace H] {I : ModelWithCorners 𝕜 E H}
+  [TopologicalSpace M] [ChartedSpace H M] {n : ℕ∞ω}
+  [IsManifold I n M] [TopologicalSpace N]
 
-open IsManifold OpenPartialHomeomorph in lemma chartedSpace_trans_mem_maximalAtlas (φ : M ≃ₜ N)
-    (e : OpenPartialHomeomorph N H) (he : letI := φ.chartedSpace H; e ∈ atlas H N) :
+open IsManifold OpenPartialHomeomorph in
+lemma chartedSpace_trans_mem_maximalAtlas (φ : M ≃ₜ N)
+    (e : OpenPartialHomeomorph N H) (he : letI := φ.chartedSpace (H := H); e ∈ atlas H N) :
     φ.transOpenPartialHomeomorph e ∈ maximalAtlas I n M := by
   rcases he with ⟨q, he⟩
   rw [← he, transOpenPartialHomeomorph_eq_trans, ← OpenPartialHomeomorph.trans_assoc]
-  -- We use here that the composition of φ with its local inverse at a point is equal to the
-  -- identity (on some open set).
+  -- Composing φ with its local inverse at a point is equal to the identity (on some open set).
   refine StructureGroupoid.mem_maximalAtlas_of_eqOnSource (Setoid.trans
       ((φ.toOpenPartialHomeomorph_trans_localInverseAt _).trans'
       (OpenPartialHomeomorph.eqOnSource_refl _)) (by rw [ofSet_trans])) ?_
@@ -1059,7 +1061,7 @@ set_option linter.unusedVariables false in
 The definition of `TangentSpace` is not reducible so that type class inference
 does not pick wrong instances.
 -/
-@[nolint unusedArguments]
+@[nolint unusedArguments, wikidata Q909601]
 def TangentSpace {𝕜 : Type*} [NontriviallyNormedField 𝕜]
     {E : Type u} [NormedAddCommGroup E] [NormedSpace 𝕜 E]
     {H : Type*} [TopologicalSpace H] (I : ModelWithCorners 𝕜 E H)
@@ -1092,6 +1094,7 @@ variable (M) in
 -- is empty if the base manifold is empty
 /-- The tangent bundle to a manifold, as a Sigma type. Defined in terms of
 `Bundle.TotalSpace` to be able to put a suitable topology on it. -/
+@[wikidata Q746550]
 abbrev TangentBundle := Bundle.TotalSpace E (TangentSpace I : M → Type _)
 
 end TangentSpace
