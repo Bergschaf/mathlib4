@@ -679,9 +679,9 @@ is a manifold.
 -/
 @[implicit_reducible]
 def Homeomorph.isManifold [IsManifold I n M] (φ : M ≃ₜ N) :
-  letI := φ.chartedSpace H
+  letI := φ.chartedSpace (H := H)
   IsManifold I n N  where
-    __ := φ.chartedSpace H
+    __ := φ.chartedSpace (H := H)
     compatible {e e'} he he' := by
       rw [← φ.transOpenPartialHomeomorph_symm_trans]
       exact IsManifold.compatible_of_mem_maximalAtlas
@@ -689,7 +689,7 @@ def Homeomorph.isManifold [IsManifold I n M] (φ : M ≃ₜ N) :
 
 variable (I) in
 lemma Homeomorph.chartedSpace_extChartAt [Nonempty M] (φ : M ≃ₜ N) (x : N) :
-    letI := φ.chartedSpace H
+    letI := φ.chartedSpace (H := H)
     Set.EqOn (extChartAt I x)
       (φ.symm.toPartialEquiv.trans (extChartAt I (φ.symm x)))
       ((extChartAt I x).source ∩ (φ.symm.toPartialEquiv.trans (extChartAt I (φ.symm x))).source) := by
@@ -722,10 +722,10 @@ lemma Homeomorph.chartedSpace_extChartAt [Nonempty M] (φ : M ≃ₜ N) (x : N) 
   grind
 
 noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] (φ : M ≃ₜ N) :
-    letI := φ.chartedSpace H; M ≃ₘ^n⟮I, I⟯ N where
-  __ := φ.chartedSpace H
+    letI := φ.chartedSpace (H := H); M ≃ₘ^n⟮I, I⟯ N where
+  __ := φ.chartedSpace (H := H)
   __ := φ
-  contMDiff_toFun := letI := φ.isManifold I n; letI := φ.chartedSpace H; by
+  contMDiff_toFun := letI := φ.isManifold n; letI := φ.chartedSpace (H := H); by
     rw [contMDiff_iff]
     constructor
     · apply Homeomorph.continuous
