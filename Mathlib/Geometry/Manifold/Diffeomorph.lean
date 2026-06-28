@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Geometry.Manifold.ContMDiffMap
 public import Mathlib.Geometry.Manifold.MFDeriv.UniqueDifferential
+public import Mathlib.Analysis.Calculus.ContDiff.Comp
 
 /-!
 # Diffeomorphisms
@@ -686,6 +687,24 @@ theorem Homeomorph.isManifold [IsManifold I n M] (φ : M ≃ₜ N) :
       exact IsManifold.compatible_of_mem_maximalAtlas
         (φ.chartedSpace_trans_mem_maximalAtlas e he) (φ.chartedSpace_trans_mem_maximalAtlas e' he')
 
+noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] (φ : M ≃ₜ N) :
+    letI := φ.chartedSpace (H := H); Diffeomorph I I M N n where
+  __ := φ.chartedSpace (H := H)
+  __ := φ
+  contMDiff_toFun := letI instM := φ.isManifold (I := I) (n := n); by
+    rw [contMDiff_iff]
+    constructor
+    · simp
+      fun_prop
+    · intro x y
+      apply ContDiffOn.comp
+
+
+  contMDiff_invFun := by sorry
+
+
+
+#exit
 variable (I) in
 lemma Homeomorph.chartedSpace_extChartAt [Nonempty M] (φ : M ≃ₜ N) (x : N) :
     letI := φ.chartedSpace (H := H)
@@ -720,6 +739,7 @@ lemma Homeomorph.chartedSpace_extChartAt [Nonempty M] (φ : M ≃ₜ N) (x : N) 
   simp [chartAt] at hx'
   grind
 
+#exit
 noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] (φ : M ≃ₜ N) :
     letI := φ.chartedSpace (H := H); M ≃ₘ^n⟮I, I⟯ N where
   __ := φ.chartedSpace (H := H)
