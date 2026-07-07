@@ -687,24 +687,6 @@ theorem Homeomorph.isManifold [IsManifold I n M] (φ : M ≃ₜ N) :
       exact IsManifold.compatible_of_mem_maximalAtlas
         (φ.chartedSpace_trans_mem_maximalAtlas e he) (φ.chartedSpace_trans_mem_maximalAtlas e' he')
 
-noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] (φ : M ≃ₜ N) :
-    letI := φ.chartedSpace (H := H); Diffeomorph I I M N n where
-  __ := φ.chartedSpace (H := H)
-  __ := φ
-  contMDiff_toFun := letI instM := φ.isManifold (I := I) (n := n); by
-    rw [contMDiff_iff]
-    constructor
-    · simp
-      fun_prop
-    · intro x y
-      apply ContDiffOn.comp
-
-
-  contMDiff_invFun := by sorry
-
-
-
-#exit
 variable (I) in
 lemma Homeomorph.chartedSpace_extChartAt [Nonempty M] (φ : M ≃ₜ N) (x : N) :
     letI := φ.chartedSpace (H := H)
@@ -739,45 +721,86 @@ lemma Homeomorph.chartedSpace_extChartAt [Nonempty M] (φ : M ≃ₜ N) (x : N) 
   simp [chartAt] at hx'
   grind
 
-#exit
-noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] (φ : M ≃ₜ N) :
+variable (I) in
+lemma Homeomorph.chartedSpace_extChartAt_symm [Nonempty M] (φ : M ≃ₜ N) (n : N) :
+    letI := φ.chartedSpace (H := H)
+    Set.EqOn (extChartAt I n).symm
+      ((extChartAt I (φ.symm n)).symm.trans φ.toPartialEquiv)
+      (univ) := by
+  intro e he
+  simp [-extChartAt]
+  simp
+  --- Wie?? Stimmt das???
+  sorry
+
+#check Homeomorph.chartedSpace_extChartAt_symm
+
+      -- Sei e_m chart auf M, e_n chart auf N
+      -- φ x ∈ (e_n).source
+      -- e_n = e_m ∘ φ.symm
+      -- => e_n (φ x) = e_m x => da φ x in source von e_n ist e_m x in target von e_n
+lemma Homeomorph.mem_target_extChart (φ : M ≃ₜ N) (m : M) [Nonempty M] :
+    letI := φ.chartedSpace (H := H)
+    (extChartAt I m) m ∈ ((extChartAt I (φ m))).target := by
+  letI := φ.chartedSpace (H := H)
+  have mem_source : φ m ∈ ((extChartAt I (φ m)).source ∩ (φ.symm.toPartialEquiv ≫ extChartAt I (φ.symm (φ m))).source) := by sorry
+  have h := φ.chartedSpace_extChartAt I (φ m) mem_source
+  simp only [symm_apply_apply, PartialEquiv.coe_trans, Equiv.toPartialEquiv_apply, coe_toEquiv,
+    comp_apply] at h
+  rw [← h]
+  simp
+
+noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] [boundaryless : I.Boundaryless] (φ : M ≃ₜ N) :
     letI := φ.chartedSpace (H := H); M ≃ₘ^n⟮I, I⟯ N where
   __ := φ.chartedSpace (H := H)
   __ := φ
-  contMDiff_toFun := letI := φ.isManifold n; letI := φ.chartedSpace (H := H); by
-    rw [contMDiff_iff]
+  contMDiff_toFun := letI := φ.isManifold (H := H) (I := I) (n := n); letI := φ.chartedSpace (H := H); by
+    rw [ContMDiff]
+    intro m
+    rw [contMDiffAt_iff]
     constructor
-    · apply Homeomorph.continuous
-    intro x y
+    · apply φ.continuous.continuousAt
+    --have h : source
+    have h : Set.EqOn ((↑(extChartAt I (φ.toEquiv m)) ∘ ⇑φ.toEquiv ∘ ↑(extChartAt I m).symm))
+        (↑(extChartAt I m) ∘ (↑(extChartAt I m).symm))
+        ((range I) ∩ ((extChartAt I (φ m)).target ∩ ↑(extChartAt I m).symm.source)) := by
+      intro e he
+      have ha := φ.chartedSpace_extChartAt I (φ m)
+      simp only [coe_toEquiv, comp_apply]
+      have mem_source : ((φ ((extChartAt I m).symm e))) ∈ ((extChartAt I (φ m)).source ∩ (φ.symm.toPartialEquiv ≫ extChartAt I (φ.symm (φ m))).source) := by
+        simp only [symm_apply_apply, PartialEquiv.trans_source, Equiv.toPartialEquiv_source,
+          Equiv.toPartialEquiv_apply, coe_toEquiv, univ_inter, mem_inter_iff, mem_preimage]
+        simp only [PartialEquiv.symm_source, mem_inter_iff] at he
+        constructor
+        ·
+          -- φ (extChart m) ist im prinzip das inverse zu extChart (φ m) .symm
+          sorry
+        · sorry
 
-    have h : Set.EqOn ((↑(extChartAt I y) ∘ ⇑φ.toEquiv ∘ ↑(extChartAt I x).symm)) (↑(extChartAt I (φ.symm y)) ∘ (↑(extChartAt I x).symm)) (((extChartAt I x).target ∩ ↑(extChartAt I x).symm ⁻¹' ⇑φ.toEquiv ⁻¹' (extChartAt I y).source)) := by
+      specialize ha mem_source
+      rw [ha]
+      simp
 
-      intro a ha
-      have h2 := φ.chartedSpace_extChartAt I y
-      rw [Set.EqOn] at h2
-      simp only [coe_toEquiv, comp_apply, id_eq]
-      rw [h2]
-      simp only [PartialEquiv.coe_trans, Equiv.toPartialEquiv_apply, coe_toEquiv, comp_apply,
-        symm_apply_apply]
-      simp only [PartialEquiv.trans_source, Equiv.toPartialEquiv_source, Equiv.toPartialEquiv_apply,
-        coe_toEquiv, univ_inter, mem_inter_iff, mem_preimage, symm_apply_apply]
-
-      simp only [coe_toEquiv, mem_inter_iff, mem_preimage] at ha
-      rcases ha with ⟨ha1, ha2⟩
+    have source_is_nhd :
+        ((extChartAt I (φ m)).target ∩ ↑(extChartAt I m).symm.source) ∈ nhds ((extChartAt I m) m) := by
+      simp only [PartialEquiv.symm_source, Filter.inter_mem_iff]
       constructor
-      exact ha2
-      simp [-extChartAt] at h2
+      · apply extChartAt_target_mem_nhds' (φ.mem_target_extChart _)
+      · apply extChartAt_target_mem_nhds -- todo geht das ohne die boundaryless assumption?
 
-      sorry
+    apply (contDiffWithinAt_inter source_is_nhd).mp
 
-
-
-
-
-
-    rw [contDiffOn_congr h]
-    -- TODO zeigen dass die source passt
-    apply contDiffOn_ext_coord_change
-
+    have h_mem : ((extChartAt I m) m) ∈ (range ↑I ∩ ((extChartAt I (φ m)).target ∩ (extChartAt I m).symm.source)) := by
+      rw [Set.inter_eq_right.mpr]
+      · simp only [PartialEquiv.symm_source, mem_inter_iff]
+        constructor
+        · exact φ.mem_target_extChart _
+        · simp
+      · apply inf_le_of_left_le (extChartAt_target_subset_range _)
+    have h3 := @contDiffWithinAt_congr_of_mem 𝕜 _ E _ _ E _ _ _ _ _ _ n h h_mem
+    apply h3.mpr
+    apply (contDiffWithinAt_inter source_is_nhd).mpr
+    apply contDiffWithinAt_ext_coord_change
+    simp
 
   contMDiff_invFun := by sorry
