@@ -749,7 +749,7 @@ lemma Homeomorph.mem_target_extChart (φ : M ≃ₜ N) (m : M) [Nonempty M] :
   rw [← h]
   exact mem_extChartAt_target (φ m)
 
-lemma Homeomorph.chartedSpace_writtenInExtChart (φ : M ≃ₜ N) (m : M) [Nonempty M] :
+lemma Homeomorph.chartedSpace_writtenInExtChart (φ : M ≃ₜ N) (m : M) [Nonempty M] [I.Boundaryless] :
   letI := φ.chartedSpace (H := H);
   Set.EqOn (writtenInExtChartAt I I m φ) (writtenInExtChartAt I I m id)
     ((range I) ∩ ((extChartAt I (φ m)).target ∩ ↑(extChartAt I m).symm.source)) := by
@@ -771,23 +771,8 @@ lemma Homeomorph.chartedSpace_writtenInExtChart (φ : M ≃ₜ N) (m : M) [Nonem
         -- φ (extChart m) ist im prinzip das inverse zu extChart (φ m) .symm
       · rcases he with ⟨_, _, he⟩
         simp_all [-extChartAt]
-      simp only [coe_toEquiv, comp_apply, φ.chartedSpace_extChartAt I (φ m) mem_source]
-      simp
-    have source_is_nhd : ((extChartAt I (φ m)).target ∩ ↑(extChartAt I m).symm.source) ∈
-        nhds ((extChartAt I m) m) := by
-      simp only [PartialEquiv.symm_source, Filter.inter_mem_iff]
-      constructor
-      · apply extChartAt_target_mem_nhds' (φ.mem_target_extChart _)
-      · apply extChartAt_target_mem_nhds -- todo geht das ohne die boundaryless assumption?
-    apply (contDiffWithinAt_inter source_is_nhd).mp
-    have h_mem : ((extChartAt I m) m) ∈
-        (range ↑I ∩ ((extChartAt I (φ m)).target ∩ (extChartAt I m).symm.source)) := by
-      rw [Set.inter_eq_right.mpr]
-      · simpa only [PartialEquiv.symm_source, mem_inter_iff] using
-          ⟨φ.mem_target_extChart _, by simp⟩
-      · exact inf_le_of_left_le (extChartAt_target_subset_range _)
-  sorry
-
+    simp only [comp_apply, φ.chartedSpace_extChartAt I (φ m) mem_source, writtenInExtChartAt]
+    simp
 
 noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] [boundaryless : I.Boundaryless] (φ : M ≃ₜ N) :
     letI := φ.chartedSpace (H := H); M ≃ₘ^n⟮I, I⟯ N where
@@ -796,16 +781,23 @@ noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] [bounda
   contMDiff_toFun := letI := φ.isManifold (H := H) (I := I) (n := n); letI := φ.chartedSpace (H := H); by
     intro m
     refine contMDiffAt_iff.mpr ⟨φ.continuous.continuousAt, ?_⟩
-    have h : Set.EqOn ((↑(extChartAt I (φ m)) ∘ ⇑φ ∘ ↑(extChartAt I m).symm))
-        (↑(extChartAt I m) ∘ (↑(extChartAt I m).symm))
-        ((range I) ∩ ((extChartAt I (φ m)).target ∩ ↑(extChartAt I m).symm.source)) := by
-      intro e he
-      have h := φ.chartedSpace_writtenInExtChart m he
-      apply h
-    have h3 := @contDiffWithinAt_congr_of_mem 𝕜 _ E _ _ E _ _ _ _ _ _ n h h_mem
+    have source_is_nhd : ((extChartAt I (φ m)).target ∩ ↑(extChartAt I m).symm.source) ∈
+        nhds ((extChartAt I m) m) := by
+      simp only [PartialEquiv.symm_source, Filter.inter_mem_iff]
+      constructor
+      · apply extChartAt_target_mem_nhds' (φ.mem_target_extChart _)
+      · apply extChartAt_target_mem_nhds -- todo geht das ohne die boundaryless assumption?
+    have h_mem : ((extChartAt I m) m) ∈
+        (range ↑I ∩ ((extChartAt I (φ m)).target ∩ (extChartAt I m).symm.source)) := by
+      rw [Set.inter_eq_right.mpr]
+      · simpa only [PartialEquiv.symm_source, mem_inter_iff] using
+          ⟨φ.mem_target_extChart _, by simp⟩
+      · exact inf_le_of_left_le (extChartAt_target_subset_range _)
+    apply (contDiffWithinAt_inter source_is_nhd).mp
+    have h3 := @contDiffWithinAt_congr_of_mem 𝕜 _ E _ _ E _ _ _ _ _ _ n
+      (φ.chartedSpace_writtenInExtChart m) h_mem
     apply h3.mpr
-    apply (contDiffWithinAt_inter source_is_nhd).mpr
-    apply contDiffWithinAt_ext_coord_change
+    apply (contDiffWithinAt_inter source_is_nhd).mpr (contDiffWithinAt_ext_coord_change _ _ _)
     simp
 
   contMDiff_invFun := by
