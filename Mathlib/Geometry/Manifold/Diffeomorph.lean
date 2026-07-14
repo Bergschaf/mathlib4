@@ -698,17 +698,18 @@ lemma Homeomorph.chartedSpace_extChartAt [Nonempty M] (φ : M ≃ₜ N) (x : N) 
     ModelWithCorners.toPartialEquiv_coe, OpenPartialHomeomorph.toFun_eq_coe, comp_apply,
     Equiv.toPartialEquiv_apply, coe_toEquiv]
   congr
-  rw [Homeomorph.chartedSpace, IsLocalHomeomorph.chartedSpace, IsLocalHomeomorph.chartedSpaceOfRightInverse]
-  simp only [chartAt, OpenPartialHomeomorph.coe_trans, comp_apply]
+  rw [Homeomorph.chartedSpace, IsLocalHomeomorph.chartedSpace,
+    IsLocalHomeomorph.chartedSpaceOfRightInverse, chartAt, ChartedSpace.chartAt,
+    OpenPartialHomeomorph.coe_trans, comp_apply]
   congr
   · have h1 := Surjective.hasRightInverse (Homeomorph.surjective φ) |>.choose_spec
     have h := Function.invFun_eq_of_injective_of_rightInverse φ.injective h1
-    rw [← h]
     apply φ.injective
-    simp only [apply_symm_apply]
+    rw [← h, apply_symm_apply]
     apply Function.rightInverse_invFun φ.surjective
   · rw [← @symm_apply_eq]
-    have h := localInverseAt_trans_toOpenPartialHomeomorph φ (φ.surjective.hasRightInverse.choose x) |>.right
+    have h := localInverseAt_trans_toOpenPartialHomeomorph φ
+      (φ.surjective.hasRightInverse.choose x) |>.right
     simp only [EqOn, OpenPartialHomeomorph.trans_toPartialEquiv, PartialEquiv.trans_source,
       OpenPartialHomeomorph.toFun_eq_coe, toOpenPartialHomeomorph_source, preimage_univ, inter_univ,
       OpenPartialHomeomorph.coe_trans, toOpenPartialHomeomorph_apply, comp_apply,
@@ -740,9 +741,8 @@ lemma Homeomorph.mem_target_extChart (φ : M ≃ₜ N) (m : M) [Nonempty M] :
     letI := φ.chartedSpace (H := H)
     (extChartAt I m) m ∈ ((extChartAt I (φ m))).target := by
   letI := φ.chartedSpace (H := H)
-  have mem_source : φ m ∈
-      ((extChartAt I (φ m)).source ∩ (φ.symm.toPartialEquiv ≫ extChartAt I (φ.symm (φ m))).source) := by
-    simp
+  have mem_source : φ m ∈ ((extChartAt I (φ m)).source ∩
+    (φ.symm.toPartialEquiv ≫ extChartAt I (φ.symm (φ m))).source) := by simp
   have h := φ.chartedSpace_extChartAt I (φ m) mem_source
   simp only [symm_apply_apply, PartialEquiv.coe_trans, Equiv.toPartialEquiv_apply, coe_toEquiv,
     comp_apply] at h
@@ -778,30 +778,22 @@ noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] [bounda
     letI := φ.chartedSpace (H := H); M ≃ₘ^n⟮I, I⟯ N where
   __ := φ.chartedSpace (H := H)
   __ := φ
-  contMDiff_toFun := letI := φ.isManifold (H := H) (I := I) (n := n); letI := φ.chartedSpace (H := H); by
-    intro m
+  contMDiff_toFun m := letI := φ.isManifold (H := H) (I := I) (n := n); letI := φ.chartedSpace (H := H); by
     refine contMDiffAt_iff.mpr ⟨φ.continuous.continuousAt, ?_⟩
-    have source_is_nhd : ((extChartAt I (φ m)).target ∩ ↑(extChartAt I m).symm.source) ∈
+    have source_is_nhd : ((extChartAt I (φ m)).target ∩ (extChartAt I m).symm.source) ∈
         nhds ((extChartAt I m) m) := by
-      simp only [PartialEquiv.symm_source, Filter.inter_mem_iff]
-      constructor
-      · apply extChartAt_target_mem_nhds' (φ.mem_target_extChart _)
-      · apply extChartAt_target_mem_nhds -- todo geht das ohne die boundaryless assumption?
+      rw [PartialEquiv.symm_source, Filter.inter_mem_iff]
+      exact ⟨extChartAt_target_mem_nhds' (φ.mem_target_extChart _), extChartAt_target_mem_nhds _⟩
     have h_mem : ((extChartAt I m) m) ∈
-        (range ↑I ∩ ((extChartAt I (φ m)).target ∩ (extChartAt I m).symm.source)) := by
+        (range I ∩ ((extChartAt I (φ m)).target ∩ (extChartAt I m).symm.source)) := by
       rw [Set.inter_eq_right.mpr]
       · simpa only [PartialEquiv.symm_source, mem_inter_iff] using
           ⟨φ.mem_target_extChart _, by simp⟩
       · exact inf_le_of_left_le (extChartAt_target_subset_range _)
     apply (contDiffWithinAt_inter source_is_nhd).mp
-    have h3 := @contDiffWithinAt_congr_of_mem 𝕜 _ E _ _ E _ _ _ _ _ _ n
-      (φ.chartedSpace_writtenInExtChart m) h_mem
-    apply h3.mpr
-    apply (contDiffWithinAt_inter source_is_nhd).mpr (contDiffWithinAt_ext_coord_change _ _ _)
-    simp
+    apply contDiffWithinAt_congr_of_mem (φ.chartedSpace_writtenInExtChart m) h_mem |>.mpr
+    exact contDiffWithinAt_inter source_is_nhd |>.mpr
+      (contDiffWithinAt_ext_coord_change _ _ (by simp))
 
-  contMDiff_invFun := by
-    rw [ContMDiff]
-    intro m
-    rw [contMDiffAt_iff]
+  contMDiff_invFun m := by
     sorry
