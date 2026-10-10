@@ -694,20 +694,18 @@ lemma Homeomorph.chartedSpace_extChartAt [Nonempty M] (φ : M ≃ₜ N) (x : N) 
       (φ.symm.toPartialEquiv.trans (extChartAt I (φ.symm x)))
       ((extChartAt I x).source ∩ (φ.symm.toPartialEquiv.trans (extChartAt I (φ.symm x))).source) := by
   intro x' hx'
-  simp only [extChartAt, OpenPartialHomeomorph.extend, PartialEquiv.coe_trans,
-    ModelWithCorners.toPartialEquiv_coe, OpenPartialHomeomorph.toFun_eq_coe, comp_apply,
-    Equiv.toPartialEquiv_apply, coe_toEquiv]
-  congr
-  rw [Homeomorph.chartedSpace, IsLocalHomeomorph.chartedSpace,
-    IsLocalHomeomorph.chartedSpaceOfRightInverse, chartAt, ChartedSpace.chartAt,
-    OpenPartialHomeomorph.coe_trans, comp_apply]
+  simp only [extChartAt, OpenPartialHomeomorph.extend, chartAt, ChartedSpace.chartAt,
+    OpenPartialHomeomorph.trans_toPartialEquiv, PartialEquiv.coe_trans,
+    ModelWithCorners.toPartialEquiv_coe, PartialHomeomorph.toFun_eq_coe,
+    OpenPartialHomeomorph.coe_toPartialHomeomorph, comp_apply, Equiv.toPartialEquiv_apply,
+    coe_toEquiv]
   congr
   · have h1 := Surjective.hasRightInverse (Homeomorph.surjective φ) |>.choose_spec
     have h := Function.invFun_eq_of_injective_of_rightInverse φ.injective h1
     apply φ.injective
     rw [← h, apply_symm_apply]
     apply Function.rightInverse_invFun φ.surjective
-  · rw [← @symm_apply_eq]
+  · rw [← symm_apply_eq]
     have h := localInverseAt_trans_toOpenPartialHomeomorph φ
       (φ.surjective.hasRightInverse.choose x) |>.right
     simp only [EqOn, OpenPartialHomeomorph.trans_toPartialEquiv, PartialEquiv.trans_source,
@@ -730,11 +728,9 @@ lemma Homeomorph.chartedSpace_extChartAt_symm [Nonempty M] (φ : M ≃ₜ N) (n 
     IsLocalHomeomorph.localInverseAt_symm, ModelWithCorners.toPartialEquiv_coe_symm, comp_apply,
     PartialEquiv.coe_trans, Equiv.toPartialEquiv_apply, coe_toEquiv, EmbeddingLike.apply_eq_iff_eq]
   congr
-  let h := Function.invFun_eq_of_injective_of_rightInverse φ.injective
-    <| Surjective.hasRightInverse (Homeomorph.surjective φ) |>.choose_spec
-  rw [← h]
   apply φ.injective
-  rw [apply_symm_apply]
+  rw [← Function.invFun_eq_of_injective_of_rightInverse
+    φ.injective φ.surjective.hasRightInverse.choose_spec, apply_symm_apply]
   apply Function.rightInverse_invFun φ.surjective
 
 lemma Homeomorph.mem_target_extChart (φ : M ≃ₜ N) (m : M) [Nonempty M] :
@@ -780,7 +776,7 @@ noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] [bounda
   __ := φ
   contMDiff_toFun m := letI := φ.isManifold (H := H) (I := I) (n := n); letI := φ.chartedSpace (H := H); by
     refine contMDiffAt_iff.mpr ⟨φ.continuous.continuousAt, ?_⟩
-    have source_is_nhd : ((extChartAt I (φ m)).target ∩ (extChartAt I m).symm.source) ∈
+    have source_nhd : ((extChartAt I (φ m)).target ∩ (extChartAt I m).symm.source) ∈
         nhds ((extChartAt I m) m) := by
       rw [PartialEquiv.symm_source, Filter.inter_mem_iff]
       exact ⟨extChartAt_target_mem_nhds' (φ.mem_target_extChart _), extChartAt_target_mem_nhds _⟩
@@ -790,9 +786,9 @@ noncomputable def Homeomorph.diffeomorph [IsManifold I n M] [Nonempty M] [bounda
       · simpa only [PartialEquiv.symm_source, mem_inter_iff] using
           ⟨φ.mem_target_extChart _, by simp⟩
       · exact inf_le_of_left_le (extChartAt_target_subset_range _)
-    apply (contDiffWithinAt_inter source_is_nhd).mp
+    apply (contDiffWithinAt_inter source_nhd).mp
     apply contDiffWithinAt_congr_of_mem (φ.chartedSpace_writtenInExtChart m) h_mem |>.mpr
-    exact contDiffWithinAt_inter source_is_nhd |>.mpr
+    exact contDiffWithinAt_inter source_nhd |>.mpr
       (contDiffWithinAt_ext_coord_change _ _ (by simp))
 
   contMDiff_invFun m := by
